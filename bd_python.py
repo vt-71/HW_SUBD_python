@@ -4,6 +4,7 @@
 #!!! В программе приняты условия, что фамилия и email клиента уникальны, телефон может принадлежать одному человеку. Имена у разных людей могут совпадать.
 
 import email
+from operator import index
 import psycopg2
 
 
@@ -26,7 +27,7 @@ with psycopg2.connect(database='contacts_hw', user='postgres', password='admin')
                 cur.execute("""
                 CREATE TABLE IF NOT EXISTS phones(
                 id_client INTEGER NOT NULL REFERENCES personals(id_client),
-                phone_client INTEGER);
+                phone_client VARCHAR(20));
                 """)
                 conn.commit() 
         
@@ -36,6 +37,8 @@ with psycopg2.connect(database='contacts_hw', user='postgres', password='admin')
                         postgres_insert_client = ("""INSERT INTO personals (first_name, last_name, email)
                                                 VALUES (%s,%s,%s) RETURNING id_client""")
                         cur.execute (postgres_insert_client, recording_list[:3]) 
+                        cur.execute("""SELECT id_client FROM personals WHERE last_name = %s;""", (recording_list[1],))
+                        id_client = cur.fetchone()
                 else:
                         cur.execute("""SELECT id_client FROM personals WHERE last_name = %s;""", (recording_list[1],))
                         id_client = cur.fetchone()
@@ -77,25 +80,27 @@ with psycopg2.connect(database='contacts_hw', user='postgres', password='admin')
                 conn.commit() 
                 
         def find_client(client_list):
-#Функция, позволяющая найти клиента по его данным
-                if client_list[1] != 0:
+                index = 1
+                for date in client_list[1:4]:
+                        if date == '0':
+                                index += 1
+                        else:
+                                break
+                if index == 1:
                         cur.execute("""SELECT * FROM personals WHERE last_name = %s;""", (client_list[1],))
-                elif client_list[2] != 0:
+                elif index == 2:
                         cur.execute("""SELECT * FROM personals WHERE email = %s;""", (client_list[2],))
-                        
-                date = cur.fetchone()
-                print(f' id клиента: {date[0]}\n имя: {date[1]}\n фамилия: {date[2]}\n email: {date[3]}') 
-               
-                        
-                                
-                        
-                
+                elif index == 3:
+                        cur.execute("""SELECT * FROM phones WHERE phone_client = %s;""", (client_list[3],))
+                elif index == 4:
+                        cur.execute("""SELECT * FROM personals WHERE first_name = %s;""", (client_list[0],))
+                elif index == 4 and client_list[0] == '0':
+                        print('Клиент с такими данными не найден')
+                for date in cur.fetchall():
+                        print(f' id клиента: {date[0]}\n имя: {date[1]}\n фамилия: {date[2]}\n email: {date[3]}') 
+                        print()
 
-        
-                
-        
-        
-                
+  
 
         print('1 - создать новую БД \n2 - ввести данные нового клиента \n3 - внести телефон существующего клиента \n4 - изменить данные клиента \n5 - удалить телефон клиента \n6 - удалить существующего клиента \n7 - найти клиента по его данным')        
         main_menu = int(input('Введите пункт меню: '))
@@ -108,18 +113,18 @@ with psycopg2.connect(database='contacts_hw', user='postgres', password='admin')
                 first_name = input('Введите имя клиента: ')  
                 last_name = input('Введите фамилию клиента: ') 
                 email = input ('Введите email клиента: ')
-                phone_client = input ('Введите номер телефона клиента (цифрами), если нет, введите 0: ')
+                phone_client = input ('Введите номер телефона клиента (цифрами, без +), если нет, введите 0: ')
                 recording_list = [first_name, last_name, email, phone_client]
                 if main_menu == 4:
                         r = 1
                 insert_client(recording_list, r)
         if main_menu == 3:
                 last_name = input('Введите фамилию клиента: ') 
-                phone_client = input ('Введите номер телефона клиента (цифрами): ')
+                phone_client = input ('Введите номер телефона клиента (цифрами, без +): ')
                 insert_phone(last_name, phone_client)
         if main_menu == 5:
                 last_name = input('Введите фамилию клиента: ') 
-                phone_client = input ('Введите номер удаляемого телефона клиента (цифрами): ')
+                phone_client = input ('Введите номер удаляемого телефона клиента (цифрами, без +): ')
                 del_phone(last_name, phone_client)
                 
         if main_menu == 6:
@@ -127,13 +132,13 @@ with psycopg2.connect(database='contacts_hw', user='postgres', password='admin')
                 del_client(last_name)
         
         if main_menu == 7: 
-                client_list = []
+                client_list = [0, 0, 0, 0]
                 print('Введите данные, которые известны. Если данных нет, введите 0')
                 first_name = input('Введите имя клиента: ')  
                 last_name = input('Введите фамилию клиента: ') 
-                email = input ('Введите email клиента: ')
-                phone_client = input ('Введите номер телефона клиента (цифрами), если нет, введите 0: ')
-                client_list = [first_name, last_name, email, phone_client]
+                Email = input ('Введите email клиента: ')
+                phone_client = input ('Введите номер телефона клиента (цифрами, без +), если нет, введите 0: ')
+                client_list = [first_name, last_name, Email, phone_client]
                 find_client(client_list)
 
                 
